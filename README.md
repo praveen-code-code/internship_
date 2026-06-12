@@ -1,4 +1,7 @@
 ------
+# open powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 python -m venv venv
 
 venv\scripts\activate #windows
