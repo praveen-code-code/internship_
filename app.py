@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request,jsonify
 import psycopg2
 
 app =Flask(__name__)
@@ -34,6 +34,35 @@ def create_student_table():
     connection.close()
 
 create_student_table()
+
+
+@app.route("/send_data", methods = ['POST'])
+def send_data():
+    student_name = request.json['student_name']
+    roll_number = request.json['roll_number']
+    email = request.json['email']
+    connection = get_db_connection()
+    cur = connection.cursor()
+    cur.execute("""
+        INSERT  INTO student_table(student_name ,roll_number, email) VALUES(%s,%s,%s)
+""",(student_name,roll_number,email))
+    connection.commit()
+    cur.close()
+    connection.close()
+    return jsonify({"message":"Data sended successfully"}),201
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
