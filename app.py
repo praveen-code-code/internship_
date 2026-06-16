@@ -52,14 +52,23 @@ def send_data():
     return jsonify({"message":"Data sended successfully"}),201
     
 
+@app.route("/get_data", methods =['GET'])
+def get_data():
+    connection =get_db_connection()
+    cur =connection.cursor()
+    cur.execute("""
+          select * from student_table
+""")
+    Data = cur.fetchone()
+    cur.close()
+    connection.close()
+    return jsonify({
+        "student_id":Data[0],
+        "student-name":Data[1],
+        "roll_number ":Data[2],
+        "email":Data[3]
 
-
-
-
-
-
-
-
+    }),200
 
 
 
