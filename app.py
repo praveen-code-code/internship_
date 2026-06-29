@@ -1,6 +1,8 @@
 from flask import Flask, request,jsonify
 import psycopg2
 from flask_bcrypt import Bcrypt
+import jwt
+import datetime
 
 app =Flask(__name__)
 
@@ -38,6 +40,24 @@ def create_student_table():
 
 create_student_table()
 
+
+SECRET_KEY = " this is mmy kleeeey"
+
+def create_jwt(user_id, username):
+
+    payload ={
+        "user_id":user_id,
+        "username":username,
+        "exp": datetime.datetime.utcnow()+ datetime.timedelta(minutes=10)
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+
+
+
+
+
 @app.route('/signup', methods = ['POST'])
 def signup():
 
@@ -53,11 +73,16 @@ def signup():
     cur = connection.cursor()
     cur.execute("""
          INSERT INTO users_table(username,email,password) VALUES(%s,%s,%s)
+                returning user_id
 """,(username,email,hashed_passsword))
+    user_id = cur.fetchone()[0]
     connection.commit()
     cur.close()
     connection.close()
-    return jsonify({"message":"signup successful"})
+
+    token = create_jwt(user_id,username)
+    return jsonify({"message":"signup successful",
+                    "token": token})
 
 
 @app.route('/login' , methods =['POST'])
@@ -75,7 +100,7 @@ def login():
 """,(email,))
     user = cur.fetchone()
     cur.close()
-    connection.close()
+    connection.close() 
     if not user:
         return jsonify({"error":"user not found"})
     user_id , username, hashed_password = user
