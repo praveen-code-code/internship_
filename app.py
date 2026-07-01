@@ -23,22 +23,42 @@ def get_db_connection():
     )
 
 #CREATE STUDENT_TABLE
-def create_student_table():
+def create_users_table():
     connection = get_db_connection()
-    cur = connection.cursor()
-    cur.execute("""
-             CREATE TABLE IF NOT EXISTS users_table(
-                 user_id SERIAL PRIMARY KEY,
-                 username TEXT NOT NULL,
-                 password TEXT NOT NULL,
-                 email TEXT NOT  NULL UNIQUE
-                );
-""")
+    cursor = connection.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users_db(
+            user_id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        );
+    """)
     connection.commit()
-    cur.close()
+    cursor.close()
     connection.close()
 
-create_student_table()
+
+# CREATE NOTE TABLE
+def create_note_table():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS note(
+            note_id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users_db(user_id),
+            title TEXT NOT NULL,
+            discription TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+
+create_users_table()
+create_note_table()
 
 
 SECRET_KEY = " this is mmy kleeeey"
@@ -54,9 +74,15 @@ def create_jwt(user_id, username):
     return token
 
 
+# VERIFY JWT
+def verify_jwt(token):
 
+    try:
+        data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return data
 
-
+    except:
+        return None
 
 @app.route('/signup', methods = ['POST'])
 def signup():
@@ -107,8 +133,10 @@ def login():
 
     if not bcrypt.check_password_hash(hashed_password,password):# (already hashed password from database,plan text that comes from client)
         return jsonify({"error":"invalid password"}),401
+    token =  create_jwt(user_id, username)
     return jsonify({
         "message":"login successful",
+        "token": token,
         "user":{
             "user_id":user_id,
             "username":username,
@@ -118,6 +146,48 @@ def login():
 
 
 
+
+# CREATE NOTE
+@app.route("/create_note", methods=['POST'])
+def create_note():
+
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return jsonify({"error": "Token required"}), 401
+
+    user_data = verify_jwt(token)
+
+    if user_data is None:
+        return jsonify({"error": "Invalid or expired token"}), 401
+
+    user_id = user_data["user_id"]
+    username = user_data["username"]
+
+    title = request.json['title']
+    discription = request.json['discription']
+
+    if not title or not discription:
+        return jsonify({"error": "All fields required"}), 400
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO note(user_id,title,discription)
+        VALUES(%s,%s,%s);
+    """, (user_id, title, discription))
+
+    connection.commit()
+
+    cursor.close()
+    connection.close()
+
+    return jsonify({
+        "message": "Note created successfully",
+        "user_id": user_id,
+        "username":username
+    }), 201
 
 
 
