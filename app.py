@@ -151,38 +151,63 @@ def login():
 @app.route("/create_note", methods=['POST'])
 def create_note():
     token = request.headers.get("Authorization")
+    print(token)
     if not token:
         return jsonify({"error": "Token required"}), 401
     user_data = verify_jwt(token)
     if user_data is None:
         return jsonify({"error": "Invalid or expired token"}), 401
-    user_id = user_data["user_id"]
+    userid = user_data["user_id"]
     username = user_data["username"]
-    
-    title = request.json['title']
-    discription = request.json['discription']
-
-    if not title or not discription:
+    title = request.json.get('title')
+    description = request.json.get('description')
+    if not title or not description:
         return jsonify({"error": "All fields required"}), 400
-
     connection = get_db_connection()
     cursor = connection.cursor()
     cursor.execute("""
-        INSERT INTO note(user_id,title,discription)
+        insert into note(user_id,title,discription)
         VALUES(%s,%s,%s);
-    """, (user_id, title, discription))
+    """, (userid, title, description))
     connection.commit()
     cursor.close()
     connection.close()
     return jsonify({
-        "message": "Note created successfully",
-        "user_id": user_id,
+        "message": "Note creation successfull..",
+        "user_id": userid,
         "username":username
     }), 201
 
 
-
-
+@app.route("/get_note", methods=['GET'])
+def get_note():
+    token = request.headers.get("Authorization")
+    if not token:
+        return jsonify({"error": "Token required"}), 401
+    user_data = verify_jwt(token)
+    if user_data is None:
+        return jsonify({"error": "Invalid or expired token"}), 401
+    connection = get_db_connection()
+    cur = connection.cursor()
+    cur.execute("""
+       select note_id,title,discription ,created_at from note
+                where user_id=%s;
+""",(user_data["user_id"],))
+    notes =cur.fetchall()
+    cur.close()
+    connection.close()
+    return jsonify({
+        "user_id":user_data["user_id"],
+        "username":user_data["username"],
+        "notes":[{
+            "note_id":note[0],
+            "title":note[1],
+            "discription":note[2],
+            "created_at":note[3]
+        }
+         for note in notes
+        ]
+    })
 
 
 
