@@ -209,7 +209,38 @@ def get_note():
         ]
     })
 
+@app.route("/update_note/<int:note_id>", methods=['PUT'])
+def update_note(note_id):
+    token = request.headers.get("Authorization")
+    if not token:
+        return jsonify({"error": "Token required"}), 401
+    user_data = verify_jwt(token)
+    if user_data is None:
+        return jsonify({"error": "Invalid or expired token"}), 401
+    
+    title = request.json['title']
+    discription = request.json['discription']
+    connection = get_db_connection()
+    cur = connection.cursor()
+    cur.execute("""
+       select * from note
+            where note_id=%s and user_id= %s
+""", (note_id,user_data["user_id"]))
+    note = cur.fetchone()
 
+    if not note :
+        return jsonify({"error":"note not found"}),404
+    
+    cur.execute("""
+         update note set title = %s, discription =%s
+                where note_id = %s;
+""",(title,discription,note_id))
+    connection.commit()
+    cur.close()
+    connection.close()
+    return jsonify({
+        "message":"note updated sucessfully"
+    }),200
 
 
 
