@@ -242,6 +242,35 @@ def update_note(note_id):
         "message":"note updated sucessfully"
     }),200
 
+@app.route("/delete_note/<int:note_id>", methods=['DELETE'])
+def delete_note(note_id):
+    token = request.headers.get("Authorization")
+    if not token:
+        return jsonify({"error": "Token required"}), 401
+    user_data = verify_jwt(token)
+    if user_data is None:
+        return jsonify({"error": "Invalid or expired token"}), 401
+    
+    connection = get_db_connection()
+    cur = connection.cursor()
+    cur.execute("""
+       select * from note
+            where note_id=%s and user_id= %s
+""", (note_id,user_data["user_id"]))
+    note = cur.fetchone()
+
+    if not note :
+        return jsonify({"error":"note not found"}),404
+    cur.execute("""
+      delete from note 
+                where note_id =%s
+""",(note_id,))
+    connection.commit()
+    cur.close()
+    connection.close
+    return jsonify({
+        "message":"note deleted successfully"
+    }),200
 
 
 
