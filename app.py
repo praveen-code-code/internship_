@@ -1,4 +1,4 @@
-from flask import Flask, request,jsonify
+from flask import Flask, request,jsonify,render_template
 import psycopg2
 from flask_bcrypt import Bcrypt
 import jwt
@@ -61,6 +61,21 @@ create_users_table()
 create_note_table()
 
 
+
+
+@app.route("/")
+def home():
+    return render_template("login.html")
+
+@app.route("/signup_page")
+def signup_page():
+    return render_template("signup.html")
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+
 SECRET_KEY = " this is mmy kleeeey"
 
 def create_jwt(user_id, username):
@@ -98,7 +113,7 @@ def signup():
     connection = get_db_connection()
     cur = connection.cursor()
     cur.execute("""
-         INSERT INTO users_table(username,email,password) VALUES(%s,%s,%s)
+         INSERT INTO users_db(username,email,password) VALUES(%s,%s,%s)
                 returning user_id
 """,(username,email,hashed_passsword))
     user_id = cur.fetchone()[0]
@@ -121,7 +136,7 @@ def login():
     connection = get_db_connection()
     cur = connection.cursor()
     cur.execute("""
-              select user_id, username,password from users_table
+              select user_id, username,password from users_db
                 where email = %s
 """,(email,))
     user = cur.fetchone()
@@ -267,7 +282,7 @@ def delete_note(note_id):
 """,(note_id,))
     connection.commit()
     cur.close()
-    connection.close
+    connection.close()
     return jsonify({
         "message":"note deleted successfully"
     }),200
